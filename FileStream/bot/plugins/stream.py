@@ -1,10 +1,8 @@
-# FileStream/plugins/stream.py
-
 import asyncio
 from typing import List, Optional, Dict, Union
 from pyrogram import Client, filters, enums
 from pyrogram.errors import FloodWait, RPCError
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 from FileStream.bot import FileStream, multi_clients
 from FileStream.utils.bot_utils import (
@@ -17,15 +15,18 @@ from FileStream.utils.file_properties import get_file_ids, get_file_info
 from FileStream.config import Telegram
 from FileStream.utils.logger import logger  # Import custom logger
 
+# Initialize the database
+db = Database(Telegram.DATABASE_URL, Telegram.SESSION_NAME)
+
 # Common error handler
-async def handle_exception(client, message, error, user_id, log_message):
+async def handle_exception(client, message, error, user_id, log_message, *args):
     logger.error(f"Error in {message.command or 'handler'}: {error}", exc_info=True)
     await client.send_message(
         chat_id=Telegram.ULOG_CHANNEL,
         text=f"**#ErrorTrackback:** `{error}`",
         disable_web_page_preview=True
     )
-    logger.error(log_message.format(user_id=user_id, error=error))
+    logger.error(log_message.format(*args))
 
 # Private Receive Handler
 @FileStream.on_message(
@@ -71,7 +72,7 @@ async def private_receive_handler(bot: Client, message: Message):
             parse_mode=enums.ParseMode.MARKDOWN
         )
     except Exception as e:
-        await handle_exception(bot, message, e, message.from_user.id, "Error processing private message for user {}")
+        await handle_exception(bot, message, e, message.from_user.id, "Error processing private message for user {}", message.from_user.id)
 
 # Channel Receive Handler
 @FileStream.on_message(
@@ -107,7 +108,7 @@ async def channel_receive_handler(bot: Client, message: Message):
             disable_web_page_preview=True
         )
     except Exception as e:
-        await handle_exception(bot, message, e, message.chat.id, "Error processing channel message for chat {}")
+        await handle_exception(bot, message, e, message.chat.id, "Error processing channel message for chat {}", message.chat.id)
 
 # /link Command Handler
 @FileStream.on_message(filters.command("link") & ~filters.private)
@@ -192,7 +193,7 @@ async def process_single_file(client, message, reply_msg):
             parse_mode=enums.ParseMode.MARKDOWN
         )
     except Exception as e:
-        await handle_exception(client, message, e, user_id, "Error processing single file for user {}")
+        await handle_exception(client, message, e, user_id, "Error processing single file for user {}", user_id)
 
 async def process_multiple_files(client, message, reply_msg, num_files):
     user_id = message.from_user.id
@@ -234,7 +235,7 @@ async def process_multiple_files(client, message, reply_msg, num_files):
                     parse_mode=enums.ParseMode.MARKDOWN
                 )
             except Exception as e:
-                await handle_exception(client, message, e, user_id, "Error processing file ID {} for user {}")
+                await handle_exception(client, message, e, user_id, "Error processing file ID {} for user {}", msg.id, user_id)
     await message.reply_text(f"✅ Processed {processed_count} file(s).", quote=True)
     logger.info(f"User {user_id} processed {processed_count} file(s) with /link command.")
 

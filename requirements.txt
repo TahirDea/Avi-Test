@@ -1,5 +1,5 @@
 aiohttp
-git+https://github.com/KurimuzonAkuma/pyrogram.git@dev
+git+https://github.com/Hrishi2861/pyrofork-2.2.11-peer-fix.git
 python-dotenv
 tgcrypto
 motor
